@@ -63,6 +63,16 @@ model InviteCode {
   usedBy    User?
 }
 
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String   @db.Text
+  expiresAt DateTime @db.DateTime(0)
+  createdAt DateTime @default(now()) @db.DateTime(0)
+
+  @@map("sessions")
+}
+
 enum Role {
   USER
   ADMIN
