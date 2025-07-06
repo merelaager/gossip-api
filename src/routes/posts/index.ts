@@ -4,6 +4,7 @@ import {
 } from "@fastify/type-provider-typebox";
 import prisma from "../../utils/prisma";
 import { createSuccessResponse } from "../../utils/jsend";
+import { StatusCodes } from "http-status-codes";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -96,6 +97,51 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
 
       return response.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
+      );
+    },
+  );
+  fastify.get(
+    "/:postId",
+    { schema: { params: Type.Object({ postId: Type.String() }) } },
+    async (request, response) => {
+      const { user } = request.session;
+
+      const userData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { role: true, shift: true },
+      });
+
+      const post = await prisma.post.findUnique({
+        where: { id: request.params.postId },
+        include: {
+          _count: {
+            select: { likes: true },
+          },
+          likes: {
+            where: {
+              userId: user.userId,
+            },
+          },
+        },
+      });
+
+      if (!post || !userData || userData.shift !== post.shift) {
+        return response.status(StatusCodes.NOT_FOUND).send();
+      }
+
+      const liked = post.likes.length > 0;
+      const likeCount = post._count.likes;
+      const filteredPost = {
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        imageId: post.imageId,
+        published: post.published,
+        createdAt: post.createdAt,
+      };
+
+      return response.send(
+        createSuccessResponse({ post: filteredPost, liked, likeCount }),
       );
     },
   );
