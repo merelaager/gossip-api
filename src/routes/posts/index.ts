@@ -50,32 +50,55 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       );
     },
   );
-  fastify.get("/my", async (request, response) => {
-    const { user } = request.session;
-
-    const userData = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { shift: true },
-    });
-
-    if (!userData) {
-      return response.send(
-        createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
-      );
-    }
-
-    const userPosts = await prisma.post.findMany({
-      where: {
-        shift: userData.shift,
-        published: true,
-        hidden: false,
-        authorId: user.userId,
+  fastify.get(
+    "/my",
+    {
+      schema: {
+        querystring: Type.Object({
+          page: Type.Number(),
+          limit: Type.Optional(Type.Number()),
+        }),
       },
-      orderBy: { createdAt: "desc" },
-    });
+    },
+    async (request, response) => {
+      const { user } = request.session;
 
-    return response.send(createSuccessResponse({ posts: userPosts }));
-  });
+      const userData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true },
+      });
+
+      if (!userData) {
+        return response.send(
+          createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
+        );
+      }
+
+      const postsPerPage = request.query.limit || 15;
+      const pageNumber = request.query.page || 1;
+
+      const publishedPostCount = await prisma.post.count({
+        where: { shift: userData.shift, published: true, hidden: false },
+      });
+      const totalPages = Math.ceil(publishedPostCount / postsPerPage);
+
+      const posts = await prisma.post.findMany({
+        where: {
+          shift: userData.shift,
+          published: true,
+          hidden: false,
+          authorId: user.userId,
+        },
+        orderBy: { createdAt: "desc" },
+        skip: postsPerPage * (pageNumber - 1),
+        take: postsPerPage,
+      });
+
+      return response.send(
+        createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
+      );
+    },
+  );
 };
 
 export default postsRoute;
