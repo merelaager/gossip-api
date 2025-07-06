@@ -36,6 +36,32 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
     );
   });
+  fastify.get("/my", async (request, response) => {
+    const { user } = request.session;
+
+    const userData = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { shift: true },
+    });
+
+    if (!userData) {
+      return response.send(
+        createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
+      );
+    }
+
+    const userPosts = await prisma.post.findMany({
+      where: {
+        shift: userData.shift,
+        published: true,
+        hidden: false,
+        authorId: user.userId,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return response.send(createSuccessResponse({ posts: userPosts }));
+  });
 };
 
 export default postsRoute;
