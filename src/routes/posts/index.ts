@@ -78,18 +78,75 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       const postsPerPage = request.query.limit || 15;
       const pageNumber = request.query.page || 1;
 
-      const publishedPostCount = await prisma.post.count({
-        where: { shift: userData.shift, published: true, hidden: false },
+      const searchOptions = {
+        shift: userData.shift,
+        published: true,
+        hidden: false,
+        authorId: user.userId,
+      };
+
+      const authoredPostCount = await prisma.post.count({
+        where: searchOptions,
       });
-      const totalPages = Math.ceil(publishedPostCount / postsPerPage);
+      const totalPages = Math.ceil(authoredPostCount / postsPerPage);
 
       const posts = await prisma.post.findMany({
-        where: {
-          shift: userData.shift,
-          published: true,
-          hidden: false,
-          authorId: user.userId,
+        where: searchOptions,
+        orderBy: { createdAt: "desc" },
+        skip: postsPerPage * (pageNumber - 1),
+        take: postsPerPage,
+      });
+
+      return response.send(
+        createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
+      );
+    },
+  );
+  fastify.get(
+    "/liked",
+    {
+      schema: {
+        querystring: Type.Object({
+          page: Type.Number(),
+          limit: Type.Optional(Type.Number()),
+        }),
+      },
+    },
+    async (request, response) => {
+      const { user } = request.session;
+
+      const userData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true },
+      });
+
+      if (!userData) {
+        return response.send(
+          createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
+        );
+      }
+
+      const postsPerPage = request.query.limit || 15;
+      const pageNumber = request.query.page || 1;
+
+      const searchOptions = {
+        shift: userData.shift,
+        published: true,
+        hidden: false,
+        likes: {
+          some: {
+            userId: user.userId,
+          },
         },
+      };
+
+      const likedPostCount = await prisma.post.count({
+        where: searchOptions,
+      });
+      const totalPages = Math.ceil(likedPostCount / postsPerPage);
+
+      const posts = await prisma.post.findMany({
+        where: searchOptions,
         orderBy: { createdAt: "desc" },
         skip: postsPerPage * (pageNumber - 1),
         take: postsPerPage,
