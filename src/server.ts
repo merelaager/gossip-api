@@ -1,9 +1,13 @@
-import path from "node:path";
+import path, { dirname } from "node:path";
+import { fileURLToPath } from "url";
 import "dotenv/config";
 
 import Fastify from "fastify";
 import fastifyAutoload from "@fastify/autoload";
 import cors from "@fastify/cors";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const fastify = Fastify({
   logger: true,

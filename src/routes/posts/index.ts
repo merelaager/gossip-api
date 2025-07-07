@@ -1,10 +1,20 @@
+import { createReadStream } from "node:fs";
+import { createHash } from "node:crypto";
+
 import {
   FastifyPluginAsyncTypebox,
   Type,
 } from "@fastify/type-provider-typebox";
-import prisma from "../../utils/prisma";
-import { createSuccessResponse } from "../../utils/jsend";
+import fastifyMultipart from "@fastify/multipart";
 import { StatusCodes } from "http-status-codes";
+import { fileTypeFromFile } from "file-type";
+
+import prisma from "../../utils/prisma.js";
+import {
+  createErrorResponse,
+  createFailResponse,
+  createSuccessResponse,
+} from "../../utils/jsend.js";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -17,7 +27,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         }),
       },
     },
-    async (request, response) => {
+    async (request, reply) => {
       const { user } = request.session;
 
       const userData = await prisma.user.findUnique({
@@ -26,7 +36,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       if (!userData) {
-        return response.send(
+        return reply.send(
           createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
         );
       }
@@ -46,7 +56,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         pageNumber,
       );
 
-      return response.send(
+      return reply.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
       );
     },
@@ -61,7 +71,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         }),
       },
     },
-    async (request, response) => {
+    async (request, reply) => {
       const { user } = request.session;
 
       const userData = await prisma.user.findUnique({
@@ -70,7 +80,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       if (!userData) {
-        return response.send(
+        return reply.send(
           createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
         );
       }
@@ -91,7 +101,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         pageNumber,
       );
 
-      return response.send(
+      return reply.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
       );
     },
@@ -106,7 +116,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         }),
       },
     },
-    async (request, response) => {
+    async (request, reply) => {
       const { user } = request.session;
 
       const userData = await prisma.user.findUnique({
@@ -115,7 +125,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       if (!userData) {
-        return response.send(
+        return reply.send(
           createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
         );
       }
@@ -140,7 +150,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         pageNumber,
       );
 
-      return response.send(
+      return reply.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
       );
     },
@@ -148,7 +158,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/:postId",
     { schema: { params: Type.Object({ postId: Type.String() }) } },
-    async (request, response) => {
+    async (request, reply) => {
       const { user } = request.session;
 
       const userData = await prisma.user.findUnique({
@@ -171,7 +181,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       if (!post || !userData || userData.shift !== post.shift) {
-        return response.status(StatusCodes.NOT_FOUND).send();
+        return reply.status(StatusCodes.NOT_FOUND).send();
       }
 
       const liked = post.likes.length > 0;
@@ -185,11 +195,56 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         createdAt: post.createdAt,
       };
 
-      return response.send(
+      return reply.send(
         createSuccessResponse({ post: filteredPost, liked, likeCount }),
       );
     },
   );
+  fastify.register(fastifyMultipart, {
+    limits: {
+      fields: 0,
+      files: 1,
+      fileSize: 5242880, // 5 MiB
+    },
+  });
+  fastify.post("/images", async (request, reply) => {
+    const files = await request.saveRequestFiles();
+
+    if (files.length !== 1) {
+      return reply.status(StatusCodes.BAD_REQUEST).send(
+        createFailResponse({
+          message: "Fail puudub!",
+        }),
+      );
+    }
+
+    const filePath = files[0].filepath;
+    const mimeType = (await fileTypeFromFile(filePath))?.mime;
+
+    const allowedMimeTypes = ["image/png", "image/jpeg"];
+    if (!mimeType || !allowedMimeTypes.includes(mimeType)) {
+      return reply.status(StatusCodes.BAD_REQUEST).send(
+        createFailResponse({
+          message: `Failitüüp '${mimeType}' ei ole lubatud.`,
+          acceptedTypes: allowedMimeTypes,
+        }),
+      );
+    }
+
+    const sha256Hash = await hashImage(filePath);
+    const fileName = sha256Hash + "." + mimeType.split("/")[1];
+    const uploadSucceeded = await fastify.uploadToCDN(filePath, fileName);
+
+    if (!uploadSucceeded) {
+      return reply
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .send(createErrorResponse("Pilti ei õnnestunud üles laadida."));
+    }
+
+    return reply
+      .status(StatusCodes.OK)
+      .send(createSuccessResponse({ fileName }));
+  });
 };
 
 type SearchOptions = {
@@ -200,7 +255,22 @@ type SearchOptions = {
   likes?: { some: { userId: string } };
 };
 
-export const fetchPosts = async (
+const hashImage = async (filePath: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const hash = createHash("sha256");
+    const stream = createReadStream(filePath);
+
+    stream.on("error", reject);
+    hash.on("error", reject);
+
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => {
+      resolve(hash.digest("hex"));
+    });
+  });
+};
+
+const fetchPosts = async (
   searchOptions: SearchOptions,
   pageSize: number,
   pageNumber: number,

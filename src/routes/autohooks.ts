@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { StatusCodes } from "http-status-codes";
-import { createFailResponse } from "../utils/jsend";
+
+import { createFailResponse } from "../utils/jsend.js";
 
 export default async function (fastify: FastifyInstance) {
   fastify.addHook("onRequest", async (request, reply) => {
