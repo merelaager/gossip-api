@@ -34,17 +34,17 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       const postsPerPage = request.query.limit || 15;
       const pageNumber = request.query.page || 1;
 
-      const publishedPostCount = await prisma.post.count({
-        where: { shift: userData.shift, published: true, hidden: false },
-      });
-      const totalPages = Math.ceil(publishedPostCount / postsPerPage);
+      const searchOptions = {
+        shift: userData.shift,
+        published: true,
+        hidden: false,
+      };
 
-      const posts = await prisma.post.findMany({
-        where: { shift: userData.shift, published: true, hidden: false },
-        orderBy: { createdAt: "desc" },
-        skip: postsPerPage * (pageNumber - 1),
-        take: postsPerPage,
-      });
+      const { posts, totalPages } = await fetchPosts(
+        searchOptions,
+        postsPerPage,
+        pageNumber,
+      );
 
       return response.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
@@ -85,17 +85,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         authorId: user.userId,
       };
 
-      const authoredPostCount = await prisma.post.count({
-        where: searchOptions,
-      });
-      const totalPages = Math.ceil(authoredPostCount / postsPerPage);
-
-      const posts = await prisma.post.findMany({
-        where: searchOptions,
-        orderBy: { createdAt: "desc" },
-        skip: postsPerPage * (pageNumber - 1),
-        take: postsPerPage,
-      });
+      const { posts, totalPages } = await fetchPosts(
+        searchOptions,
+        postsPerPage,
+        pageNumber,
+      );
 
       return response.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
@@ -140,17 +134,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         },
       };
 
-      const likedPostCount = await prisma.post.count({
-        where: searchOptions,
-      });
-      const totalPages = Math.ceil(likedPostCount / postsPerPage);
-
-      const posts = await prisma.post.findMany({
-        where: searchOptions,
-        orderBy: { createdAt: "desc" },
-        skip: postsPerPage * (pageNumber - 1),
-        take: postsPerPage,
-      });
+      const { posts, totalPages } = await fetchPosts(
+        searchOptions,
+        postsPerPage,
+        pageNumber,
+      );
 
       return response.send(
         createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
@@ -202,6 +190,35 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       );
     },
   );
+};
+
+type SearchOptions = {
+  shift: number;
+  published: boolean;
+  hidden: boolean;
+  authorId?: string;
+  likes?: { some: { userId: string } };
+};
+
+export const fetchPosts = async (
+  searchOptions: SearchOptions,
+  pageSize: number,
+  pageNumber: number,
+) => {
+  const postCount = await prisma.post.count({
+    where: searchOptions,
+  });
+  const totalPages = Math.ceil(postCount / pageSize);
+
+  return {
+    posts: await prisma.post.findMany({
+      where: searchOptions,
+      orderBy: { createdAt: "desc" },
+      skip: pageSize * (pageNumber - 1),
+      take: pageSize,
+    }),
+    totalPages,
+  };
 };
 
 export default postsRoute;
