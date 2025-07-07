@@ -90,7 +90,6 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const searchOptions = {
         shift: userData.shift,
-        published: true,
         hidden: false,
         authorId: user.userId,
       };
@@ -315,7 +314,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
 
 type SearchOptions = {
   shift: number;
-  published: boolean;
+  published?: boolean;
   hidden: boolean;
   authorId?: string;
   likes?: { some: { userId: string } };
