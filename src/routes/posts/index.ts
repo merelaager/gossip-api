@@ -239,7 +239,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      if (!content || !imageId) {
+      if (!content && !imageId) {
         return reply.status(StatusCodes.BAD_REQUEST).send(
           createFailResponse({
             format: "Postitus peab sisaldama teksti või pilti.",
