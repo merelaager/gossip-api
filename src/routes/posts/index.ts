@@ -184,6 +184,14 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         return reply.status(StatusCodes.NOT_FOUND).send();
       }
 
+      if (
+        !post.published &&
+        userData.role === "USER" &&
+        post.authorId !== user.userId
+      ) {
+        return reply.status(StatusCodes.NOT_FOUND).send();
+      }
+
       const liked = post.likes.length > 0;
       const likeCount = post._count.likes;
       const filteredPost = {
@@ -198,6 +206,64 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.send(
         createSuccessResponse({ post: filteredPost, liked, likeCount }),
       );
+    },
+  );
+  fastify.post(
+    "/",
+    {
+      schema: {
+        body: Type.Object({
+          title: Type.String({ minLength: 1 }),
+          content: Type.Optional(Type.String({ maxLength: 15_000 })),
+          imageId: Type.Optional(Type.String({ maxLength: 255 })),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { userId } = request.session.user;
+      const { title, content, imageId } = request.body;
+
+      const userData = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { shift: true },
+      });
+
+      if (!userData) {
+        console.warn(
+          `User with ID ${userId} is authenticated but could not be found in DB.`,
+        );
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            user: "Tundmatu kasutaja. Sessioon võib olla aegunud.",
+          }),
+        );
+      }
+
+      if (!content || !imageId) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            format: "Postitus peab sisaldama teksti või pilti.",
+          }),
+        );
+      }
+
+      const fields: { title: string; content?: string; imageId?: string } = {
+        title,
+      };
+      if (content) {
+        fields.content = content;
+      }
+      if (imageId) {
+        fields.imageId = imageId;
+      }
+
+      const post = await prisma.post.create({
+        data: { ...fields, authorId: userId, shift: userData.shift },
+      });
+
+      return reply
+        .status(StatusCodes.CREATED)
+        .send(createSuccessResponse({ postId: post.id }));
     },
   );
   fastify.register(fastifyMultipart, {
