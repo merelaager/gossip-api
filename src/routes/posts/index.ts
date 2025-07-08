@@ -194,7 +194,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         return reply.status(StatusCodes.NOT_FOUND).send();
       }
 
-      const liked = post.likes.length > 0;
+      const isLiked = post.likes.length > 0;
       const likeCount = post._count.likes;
       const filteredPost = {
         id: post.id,
@@ -203,11 +203,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         imageId: post.imageId,
         published: post.published,
         createdAt: post.createdAt,
+        isLiked,
+        likeCount,
       };
 
-      return reply.send(
-        createSuccessResponse({ post: filteredPost, liked, likeCount }),
-      );
+      return reply.send(createSuccessResponse({ post: filteredPost }));
     },
   );
   fastify.post(
@@ -372,7 +372,7 @@ const fetchPosts = async (
         createdAt: post.createdAt,
         published: post.published,
         likeCount: post._count.likes,
-        liked: post.likes.length === 1,
+        isLiked: post.likes.length > 0,
       };
     }),
     totalPages,
