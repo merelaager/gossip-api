@@ -54,6 +54,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         searchOptions,
         postsPerPage,
         pageNumber,
+        user.userId,
       );
 
       return reply.send(
@@ -98,6 +99,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         searchOptions,
         postsPerPage,
         pageNumber,
+        user.userId,
       );
 
       return reply.send(
@@ -147,6 +149,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         searchOptions,
         postsPerPage,
         pageNumber,
+        user.userId,
       );
 
       return reply.send(
@@ -339,18 +342,38 @@ const fetchPosts = async (
   searchOptions: SearchOptions,
   pageSize: number,
   pageNumber: number,
+  userId: string,
 ) => {
   const postCount = await prisma.post.count({
     where: searchOptions,
   });
   const totalPages = Math.ceil(postCount / pageSize);
 
+  const posts = await prisma.post.findMany({
+    where: searchOptions,
+    orderBy: { createdAt: "desc" },
+    skip: pageSize * (pageNumber - 1),
+    take: pageSize,
+    include: {
+      _count: {
+        select: { likes: true },
+      },
+      likes: { where: { userId } },
+    },
+  });
+
   return {
-    posts: await prisma.post.findMany({
-      where: searchOptions,
-      orderBy: { createdAt: "desc" },
-      skip: pageSize * (pageNumber - 1),
-      take: pageSize,
+    posts: posts.map((post) => {
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        imageId: post.imageId,
+        createdAt: post.createdAt,
+        published: post.published,
+        likeCount: post._count.likes,
+        liked: post.likes.length === 1,
+      };
     }),
     totalPages,
   };
