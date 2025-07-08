@@ -1,10 +1,15 @@
+import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
-import { Type } from "@sinclair/typebox";
-import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
-import prisma from "../../utils/prisma.js";
 import * as argon2 from "argon2";
-import { createFailResponse, createSuccessResponse } from "../../utils/jsend.js";
+
+import prisma from "../../utils/prisma.js";
+import {
+  createFailResponse,
+  createSuccessResponse,
+} from "../../utils/jsend.js";
+
+import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 import { CredentialsSchema } from "../../schemas/auth.js";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
@@ -17,6 +22,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           [StatusCodes.OK]: SuccessResponse(
             Type.Object({
               username: Type.String(),
+              role: Type.String(),
             }),
           ),
           [StatusCodes.UNAUTHORIZED]: FailResponse(
@@ -48,6 +54,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return response.code(StatusCodes.OK).send(
         createSuccessResponse({
           username,
+          role: user.role,
         }),
       );
     },
