@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { Type } from "@sinclair/typebox";
 import { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
@@ -11,6 +13,8 @@ import {
 
 import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 import { CredentialsSchema } from "../../schemas/auth.js";
+
+const cookieDomain = process.env.COOKIE_DOMAIN!;
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
@@ -51,12 +55,19 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       request.session.user = { userId: user.id };
       await request.session.save();
 
-      return response.code(StatusCodes.OK).send(
-        createSuccessResponse({
-          username,
-          role: user.role,
-        }),
-      );
+      return response
+        .code(StatusCodes.OK)
+        .setCookie("role", user.role, {
+          domain: cookieDomain,
+          path: "/",
+          expires: new Date(new Date(Date.now() + 21 * 24 * 60 * 60 * 1000)), // 3 weeks
+        })
+        .send(
+          createSuccessResponse({
+            username,
+            role: user.role,
+          }),
+        );
     },
   );
 };
