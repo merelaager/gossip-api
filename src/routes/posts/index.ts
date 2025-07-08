@@ -255,6 +255,48 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.send(createSuccessResponse({ post: filteredPost }));
     },
   );
+  fastify.patch(
+    "/:postId",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String() }),
+        body: Type.Partial(Type.Object({ published: Type.Boolean() })),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+
+      const userData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { role: true, shift: true },
+      });
+
+      const post = await prisma.post.findUnique({
+        where: { id: request.params.postId },
+      });
+
+      if (!post || !userData || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send();
+      }
+
+      if (userData.role !== "ADMIN") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            role: "Puuduvad postituse muutmise õigused!",
+          }),
+        );
+      }
+
+      if (request.body.published !== undefined) {
+        await prisma.post.update({
+          where: { id: request.params.postId },
+          data: {},
+        });
+      }
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
   fastify.post(
     "/",
     {
