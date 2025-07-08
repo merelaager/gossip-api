@@ -266,17 +266,21 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request, reply) => {
       const { user } = request.session;
 
-      const userData = await prisma.user.findUnique({
+      const userData = (await prisma.user.findUnique({
         where: { id: user.userId },
         select: { role: true, shift: true },
-      });
+      }))!;
 
       const post = await prisma.post.findUnique({
         where: { id: request.params.postId },
       });
 
-      if (!post || !userData || userData.shift !== post.shift) {
-        return reply.status(StatusCodes.NOT_FOUND).send();
+      if (!post || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: "Postitust ei leitud.",
+          }),
+        );
       }
 
       if (userData.role !== "ADMIN") {
@@ -290,9 +294,48 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       if (request.body.published !== undefined) {
         await prisma.post.update({
           where: { id: request.params.postId },
-          data: {},
+          data: { published: request.body.published },
         });
       }
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
+  fastify.delete(
+    "/:postId",
+    { schema: { params: Type.Object({ postId: Type.String() }) } },
+    async (request, reply) => {
+      const { user } = request.session;
+
+      const userData = (await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { role: true, shift: true },
+      }))!;
+
+      const post = await prisma.post.findUnique({
+        where: { id: request.params.postId },
+      });
+
+      if (!post || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      if (post.authorId !== user.userId && userData.role !== "ADMIN") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            message: "Puuduvad postituse kustutamise õigused.",
+          }),
+        );
+      }
+
+      await prisma.post.update({
+        where: { id: request.params.postId },
+        data: { hidden: true },
+      });
 
       return reply.status(StatusCodes.NO_CONTENT).send();
     },

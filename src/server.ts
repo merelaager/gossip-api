@@ -18,7 +18,7 @@ const fastify = Fastify({
   },
 });
 
-const CORS_METHODS = ["GET", "HEAD", "POST", "PATCH"];
+const CORS_METHODS = ["GET", "HEAD", "POST", "PATCH", "DELETE"];
 
 const allowedStaticOrigins = ["https://gossip.merelaager.ee"];
 const allowedDomainPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
