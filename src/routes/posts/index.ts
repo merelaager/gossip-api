@@ -108,6 +108,51 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     },
   );
   fastify.get(
+    "/waitlist",
+    {
+      schema: {
+        querystring: Type.Object({
+          page: Type.Number(),
+          limit: Type.Optional(Type.Number()),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+
+      const userData = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true, role: true },
+      });
+
+      if (!userData || userData.role !== "ADMIN") {
+        return reply.send(
+          createSuccessResponse({ posts: [], currentPage: 1, totalPages: 1 }),
+        );
+      }
+
+      const postsPerPage = request.query.limit || 15;
+      const pageNumber = request.query.page || 1;
+
+      const searchOptions = {
+        shift: userData.shift,
+        published: false,
+        hidden: false,
+      };
+
+      const { posts, totalPages } = await fetchPosts(
+        searchOptions,
+        postsPerPage,
+        pageNumber,
+        user.userId,
+      );
+
+      return reply.send(
+        createSuccessResponse({ posts, currentPage: pageNumber, totalPages }),
+      );
+    },
+  );
+  fastify.get(
     "/liked",
     {
       schema: {
