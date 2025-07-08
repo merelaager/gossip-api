@@ -208,10 +208,10 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     async (request, reply) => {
       const { user } = request.session;
 
-      const userData = await prisma.user.findUnique({
+      const userData = (await prisma.user.findUnique({
         where: { id: user.userId },
         select: { role: true, shift: true },
-      });
+      }))!;
 
       const post = await prisma.post.findUnique({
         where: { id: request.params.postId },
@@ -227,7 +227,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         },
       });
 
-      if (!post || !userData || userData.shift !== post.shift) {
+      if (!post || post.hidden || userData.shift !== post.shift) {
         return reply.status(StatusCodes.NOT_FOUND).send();
       }
 
