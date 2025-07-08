@@ -278,7 +278,8 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       if (!post || userData.shift !== post.shift) {
         return reply.status(StatusCodes.NOT_FOUND).send(
           createFailResponse({
-            postId: "Postitust ei leitud.",
+            postId: request.params.postId,
+            message: "Postitust ei leitud.",
           }),
         );
       }
@@ -286,7 +287,8 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       if (userData.role !== "ADMIN") {
         return reply.status(StatusCodes.FORBIDDEN).send(
           createFailResponse({
-            role: "Puuduvad postituse muutmise õigused!",
+            postId: request.params.postId,
+            message: "Puuduvad postituse muutmise õigused!",
           }),
         );
       }
