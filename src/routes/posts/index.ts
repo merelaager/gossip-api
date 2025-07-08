@@ -228,7 +228,12 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       if (!post || post.hidden || userData.shift !== post.shift) {
-        return reply.status(StatusCodes.NOT_FOUND).send();
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: request.params.postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
       }
 
       if (
@@ -236,7 +241,12 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         userData.role === "USER" &&
         post.authorId !== user.userId
       ) {
-        return reply.status(StatusCodes.NOT_FOUND).send();
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: request.params.postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
       }
 
       const isLiked = post.likes.length > 0;
