@@ -15,7 +15,6 @@ import {
   createFailResponse,
   createSuccessResponse,
 } from "../../utils/jsend.js";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -405,23 +404,15 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      try {
+      const postLike = await prisma.postLike.findUnique({
+        where: { postId_userId: { postId, userId } },
+        select: { postId: true },
+      });
+
+      if (postLike) {
         await prisma.postLike.delete({
           where: { postId_userId: { postId, userId } },
         });
-      } catch (err) {
-        if (
-          err instanceof PrismaClientKnownRequestError &&
-          err.code === "P2025"
-        ) {
-          // Delete is idempotent, so we treat the resource missing
-          // as a 'success'.
-        } else {
-          console.error(err);
-          return reply
-            .status(StatusCodes.INTERNAL_SERVER_ERROR)
-            .send(createErrorResponse("Serveri viga meeldimise kustutamisel."));
-        }
       }
 
       return reply.status(StatusCodes.NO_CONTENT).send();
