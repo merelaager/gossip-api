@@ -15,6 +15,7 @@ import {
   createFailResponse,
   createSuccessResponse,
 } from "../../utils/jsend.js";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -308,6 +309,112 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           where: { id: request.params.postId },
           data: { published: request.body.published },
         });
+      }
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
+  fastify.put(
+    "/:postId/likes/:userId",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String(), userId: Type.String() }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+      const { postId, userId } = request.params;
+
+      if (user.userId !== userId) {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            message:
+              "Puuduvad õigused kasutaja nimel postitusele meeldimist lisada.",
+          }),
+        );
+      }
+
+      const userData = (await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true },
+      }))!;
+
+      const post = await prisma.post.findUnique({
+        where: { id: request.params.postId },
+      });
+
+      if (!post || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: request.params.postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      await prisma.postLike.upsert({
+        where: { postId_userId: { postId, userId } },
+        update: {},
+        create: { postId, userId },
+      });
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
+  fastify.delete(
+    "/:postId/likes/:userId",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String(), userId: Type.String() }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+      const { postId, userId } = request.params;
+
+      if (user.userId !== userId) {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            message: "Puuduvad õigused kasutaja meeldimise eemaldamiseks.",
+          }),
+        );
+      }
+
+      const userData = (await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true },
+      }))!;
+
+      const post = await prisma.post.findUnique({
+        where: { id: request.params.postId },
+      });
+
+      if (!post || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId: request.params.postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      try {
+        await prisma.postLike.delete({
+          where: { postId_userId: { postId, userId } },
+        });
+      } catch (err) {
+        if (
+          err instanceof PrismaClientKnownRequestError &&
+          err.code === "P2025"
+        ) {
+          // Delete is idempotent, so we treat the resource missing
+          // as a 'success'.
+        } else {
+          console.error(err);
+          return reply
+            .status(StatusCodes.INTERNAL_SERVER_ERROR)
+            .send(createErrorResponse("Serveri viga meeldimise kustutamisel."));
+        }
       }
 
       return reply.status(StatusCodes.NO_CONTENT).send();
