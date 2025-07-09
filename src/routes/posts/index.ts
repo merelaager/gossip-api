@@ -352,10 +352,17 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      await prisma.postLike.upsert({
+      const postLike = await prisma.postLike.findUnique({
         where: { postId_userId: { postId, userId } },
-        update: {},
-        create: { postId, userId },
+        select: { postId: true },
+      });
+
+      if (postLike) {
+        return reply.status(StatusCodes.CREATED).send();
+      }
+
+      await prisma.postLike.create({
+        data: { postId, userId },
       });
 
       return reply.status(StatusCodes.NO_CONTENT).send();
