@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { Type } from "@sinclair/typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
@@ -27,7 +29,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         },
       },
     },
-    async (request, response) => {
+    async (request, reply) => {
       const { userId } = request.session.user;
 
       const user = (await prisma.user.findUnique({
@@ -39,7 +41,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         },
       }))!;
 
-      return response.code(StatusCodes.OK).send(
+      return reply.code(StatusCodes.OK).send(
         createSuccessResponse({
           id: user.id,
           username: user.username,
@@ -48,6 +50,33 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       );
     },
   );
+  fastify.delete("/", async (request, reply) => {
+    const { userId } = request.session.user;
+    await request.session.destroy();
+    reply.clearCookie("sessionId");
+
+    // Mark the account for deletion.
+    // Do not delete it immediately for forensic purposes.
+    // E.g. a child posts some harmful content (that does not manage to get approved)
+    // but then deletes the account before any moderator can see it.
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isDeleted: true, username: randomUUID() },
+    });
+
+    await prisma.postLike.deleteMany({
+      where: { userId: userId },
+    });
+
+    // For similar reasons as above, mark the user's posts for deletion,
+    // but do not actually remove the user.
+    await prisma.post.updateMany({
+      where: { authorId: userId },
+      data: { hidden: true },
+    });
+
+    return reply.code(StatusCodes.NO_CONTENT).send();
+  });
   fastify.post(
     "/change-password",
     {

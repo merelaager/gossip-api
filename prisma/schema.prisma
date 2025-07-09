@@ -15,6 +15,7 @@ model User {
   username      String      @unique
   password      String
   name          String?
+  isDeleted     Boolean     @default(false)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   posts         Post[]      @relation("Posts")
