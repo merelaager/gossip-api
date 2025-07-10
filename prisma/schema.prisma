@@ -36,7 +36,7 @@ model Post {
   hidden     Boolean    @default(false)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
-  author     User       @relation("Posts", fields: [authorId], references: [id])
+  author     User       @relation("Posts", fields: [authorId], references: [id], onDelete: Cascade)
   authorId   String
   approvedBy User?      @relation("ApprovedPosts", fields: [approverId], references: [id])
   approverId String?
@@ -45,9 +45,9 @@ model Post {
 }
 
 model PostLike {
-  post      Post     @relation("PostLikes", fields: [postId], references: [id])
+  post      Post     @relation("PostLikes", fields: [postId], references: [id], onDelete: Cascade)
   postId    String
-  user      User     @relation("UserLikes", fields: [userId], references: [id])
+  user      User     @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
