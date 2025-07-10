@@ -58,9 +58,11 @@ model PostLike {
 model InviteCode {
   id        String   @id
   used      Boolean  @default(false)
+  name      String
+  role      Role
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  shift     Int      @default(4)
+  shift     Int
   usedBy    User?
 }
 
@@ -77,4 +79,6 @@ model Session {
 enum Role {
   USER
   ADMIN
+  MOD
+  READER
 }

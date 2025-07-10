@@ -332,6 +332,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^14.17.29":
+  version: 14.18.63
+  resolution: "@types/node@npm:14.18.63"
+  checksum: 10c0/626a371419a6a0e11ca460b22bb4894abe5d75c303739588bc96267e380aa8b90ba5a87bc552400584f0ac2a84b5c458dadcbcf0dfd2396ebeb765f7a7f95893
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:^24.0.10":
   version: 24.0.10
   resolution: "@types/node@npm:24.0.10"
@@ -531,6 +538,15 @@ __metadata:
   version: 1.0.2
   resolution: "cookie@npm:1.0.2"
   checksum: 10c0/fd25fe79e8fbcfcaf6aa61cd081c55d144eeeba755206c058682257cb38c4bd6795c6620de3f064c740695bb65b7949ebb1db7a95e4636efb8357a335ad3f54b
+  languageName: node
+  linkType: hard
+
+"crockford-base32@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "crockford-base32@npm:2.0.0"
+  dependencies:
+    "@types/node": "npm:^14.17.29"
+  checksum: 10c0/db2d6b9cc6245e0d17b9401a21a7fb079ab123b864ab38508f2d0a80f29b4c36b1ea2b7df282b594157868f94321b2a8c8d5d4b43a9c5ff9bde4d22ed19f1ad9
   languageName: node
   linkType: hard
 
@@ -846,6 +862,7 @@ __metadata:
     "@types/node": "npm:^24.0.10"
     "@types/tmp": "npm:^0"
     argon2: "npm:^0.43.0"
+    crockford-base32: "npm:^2.0.0"
     dotenv: "npm:^17.0.1"
     express-session: "npm:^1.18.1"
     fastify: "npm:^5.4.0"
