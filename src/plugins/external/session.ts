@@ -22,7 +22,7 @@ export default fp(
       throw new Error("Could not find session secret");
     }
 
-    const defaultTTL = 1000 * 60 * 60 * 7;
+    const defaultTTL = 1000 * 60 * 60 * 24 * 3;
 
     fastify.register(fastifyCookie);
     fastify.register(fastifySession, {
