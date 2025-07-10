@@ -63,8 +63,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           if (!existingCodes.has(stringNum)) break;
         }
 
+        // If the user is not allowed to post, it's because they are
+        // too young to be able to consent to the processing of their personal data.
+        // Therefore, keep them anonymous.
         signupTokens.push({
-          name: user.name,
+          name: user.isAnon ? "Anonüümne" : user.name,
           role: user.isAnon ? "READER" : "USER",
           inviteCode: stringNum,
         });
@@ -79,20 +82,16 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         })),
       });
 
-      const createdInviteCodes = await prisma.inviteCode.findMany({
-        where: {
-          id: { in: signupTokens.map((t) => t.inviteCode) },
-        },
-        select: { id: true, name: true },
-      });
-
-      const formattedInviteCodes = createdInviteCodes.map((i) => {
-        return { code: CrockfordBase32.encode(parseInt(i.id)), name: i.name };
+      const createdTokens = signupTokens.map((i) => {
+        return {
+          code: CrockfordBase32.encode(parseInt(i.inviteCode)),
+          name: i.name,
+        };
       });
 
       return reply
         .status(StatusCodes.OK)
-        .send(createSuccessResponse({ invites: formattedInviteCodes }));
+        .send(createSuccessResponse({ invites: createdTokens }));
     },
   );
 };

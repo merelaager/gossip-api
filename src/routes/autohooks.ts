@@ -9,7 +9,7 @@ export default async function (fastify: FastifyInstance) {
       return;
     }
 
-    if (request.url.startsWith("/auth/signup")) {
+    if (request.url === "/users" && request.method === "POST") {
       return;
     }
 
