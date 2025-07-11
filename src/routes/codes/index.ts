@@ -59,9 +59,10 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       users.forEach((user) => {
         let stringNum = "";
         while (true) {
-          const buf = randomBytes(4);
-          const randomUint32 = buf.readUInt32BE(0);
-          stringNum = `${randomUint32}`;
+          // 5 bytes will give us 8 characters, which is neatly
+          // split with a dash in the middle.
+          const codeNum = generateXByteRandom(5);
+          stringNum = codeNum.toString();
           if (!existingCodes.has(stringNum)) break;
         }
 
@@ -85,8 +86,10 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       const createdTokens = signupTokens.map((i) => {
+        const regCode = CrockfordBase32.encode(parseInt(i.inviteCode));
+        console.log(regCode);
         return {
-          code: CrockfordBase32.encode(parseInt(i.inviteCode)),
+          code: regCode.slice(0, 4) + "-" + regCode.slice(4),
           name: i.name,
         };
       });
@@ -179,6 +182,19 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         .send(createSuccessResponse(responseData));
     },
   );
+};
+
+const generateXByteRandom = (byteLen: number) => {
+  while (true) {
+    const buf = randomBytes(byteLen);
+    if (buf[0] & 0x80) {
+      let num = 0n;
+      for (let i = 0; i < buf.length; i++) {
+        num += BigInt(buf[i]) << (8n * BigInt(i));
+      }
+      return num;
+    }
+  }
 };
 
 export default postsRoute;
