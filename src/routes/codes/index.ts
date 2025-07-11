@@ -107,7 +107,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           [StatusCodes.OK]: SuccessResponse(
             Type.Object({
               role: Type.String(),
-              usernames: Type.Optional(Type.Array(Type.String())),
+              username: Type.Optional(Type.String()),
             }),
           ),
           "4xx": FailResponse(
@@ -154,7 +154,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      const responseData: { role: string; usernames?: string[] } = {
+      const responseData: { role: string; username?: string } = {
         role: registrationInfo.role,
       };
 
@@ -167,9 +167,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
             })
           ).map((i) => i.username),
         );
-        const availableAnonUsernames =
-          anonUsernames.difference(takenAnonUsernames);
-        responseData.usernames = Array.from(availableAnonUsernames).sort();
+        const usernames = Array.from(
+          anonUsernames.difference(takenAnonUsernames),
+        ).sort();
+        responseData.username =
+          usernames[Math.floor(Math.random() * usernames.length)];
       }
 
       return reply
