@@ -10,6 +10,8 @@ import {
   createFailResponse,
   createSuccessResponse,
 } from "../../utils/jsend.js";
+import { anonUsernames } from "../../utils/usernames.js";
+import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
@@ -92,6 +94,87 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply
         .status(StatusCodes.OK)
         .send(createSuccessResponse({ invites: createdTokens }));
+    },
+  );
+  fastify.get(
+    "/:code",
+    {
+      schema: {
+        params: Type.Object({
+          code: Type.String(),
+        }),
+        response: {
+          [StatusCodes.OK]: SuccessResponse(
+            Type.Object({
+              role: Type.String(),
+              usernames: Type.Optional(Type.Array(Type.String())),
+            }),
+          ),
+          "4xx": FailResponse(
+            Type.Object({
+              message: Type.String(),
+            }),
+          ),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { code } = request.params;
+
+      let rawToken: string;
+      try {
+        rawToken = CrockfordBase32.decode(code, {
+          asNumber: true,
+        }).toString();
+      } catch (err) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            message: "Kood on kehtetu.",
+          }),
+        );
+      }
+
+      const registrationInfo = await prisma.inviteCode.findUnique({
+        where: { id: rawToken },
+      });
+
+      if (!registrationInfo) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            message: "Registreerimiskoodi ei leitud.",
+          }),
+        );
+      }
+
+      if (registrationInfo.used) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            message: "Registreerimiskoodi on juba kasutatud.",
+          }),
+        );
+      }
+
+      const responseData: { role: string; usernames?: string[] } = {
+        role: registrationInfo.role,
+      };
+
+      if (registrationInfo.role === "READER") {
+        const takenAnonUsernames = new Set(
+          (
+            await prisma.user.findMany({
+              where: { role: "READER" },
+              select: { username: true },
+            })
+          ).map((i) => i.username),
+        );
+        const availableAnonUsernames =
+          anonUsernames.difference(takenAnonUsernames);
+        responseData.usernames = Array.from(availableAnonUsernames).sort();
+      }
+
+      return reply
+        .status(StatusCodes.OK)
+        .send(createSuccessResponse(responseData));
     },
   );
 };

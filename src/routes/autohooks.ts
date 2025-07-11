@@ -9,6 +9,10 @@ export default async function (fastify: FastifyInstance) {
       return;
     }
 
+    if (request.url.startsWith("/codes") && request.method === "GET") {
+      return;
+    }
+
     if (request.url === "/users" && request.method === "POST") {
       return;
     }
