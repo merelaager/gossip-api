@@ -16,6 +16,8 @@ import {
   createSuccessResponse,
 } from "../../utils/jsend.js";
 
+import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
+
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/",
@@ -468,32 +470,33 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           content: Type.Optional(Type.String({ maxLength: 15_000 })),
           imageId: Type.Optional(Type.String({ maxLength: 255 })),
         }),
+        response: {
+          [StatusCodes.CREATED]: SuccessResponse(
+            Type.Object({
+              postId: Type.String(),
+            }),
+          ),
+          [StatusCodes.BAD_REQUEST]: FailResponse(
+            Type.Object({
+              message: Type.String(),
+            }),
+          ),
+        },
       },
     },
     async (request, reply) => {
       const { userId } = request.session.user;
       const { title, content, imageId } = request.body;
 
-      const userData = await prisma.user.findUnique({
+      const userData = (await prisma.user.findUnique({
         where: { id: userId },
         select: { shift: true },
-      });
-
-      if (!userData) {
-        console.warn(
-          `User with ID ${userId} is authenticated but could not be found in DB.`,
-        );
-        return reply.status(StatusCodes.FORBIDDEN).send(
-          createFailResponse({
-            user: "Tundmatu kasutaja. Sessioon võib olla aegunud.",
-          }),
-        );
-      }
+      }))!;
 
       if (!content && !imageId) {
         return reply.status(StatusCodes.BAD_REQUEST).send(
           createFailResponse({
-            format: "Postitus peab sisaldama teksti või pilti.",
+            message: "Postitus peab sisaldama teksti või pilti.",
           }),
         );
       }
