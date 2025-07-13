@@ -308,7 +308,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       if (request.body.published !== undefined) {
         await prisma.post.update({
           where: { id: request.params.postId },
-          data: { published: request.body.published },
+          data: { published: request.body.published, approverId: user.userId },
         });
       }
 

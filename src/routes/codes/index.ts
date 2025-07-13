@@ -87,7 +87,6 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const createdTokens = signupTokens.map((i) => {
         const regCode = CrockfordBase32.encode(parseInt(i.inviteCode));
-        console.log(regCode);
         return {
           code: regCode.slice(0, 4) + "-" + regCode.slice(4),
           name: i.name,
