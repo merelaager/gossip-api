@@ -106,6 +106,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           password: passwordHash,
           role: registrationInfo.role,
           shift: registrationInfo.shift,
+          name: registrationInfo.name
         },
       });
 
