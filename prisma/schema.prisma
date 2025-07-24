@@ -11,20 +11,27 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(uuid())
-  username      String      @unique
+  id            String       @id @default(uuid())
+  username      String       @unique
   password      String
   name          String?
-  isDeleted     Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  posts         Post[]      @relation("Posts")
-  approvedPosts Post[]      @relation("ApprovedPosts")
-  role          Role        @default(USER)
+  isDeleted     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  posts         Post[]       @relation("Posts")
+  approvedPosts Post[]       @relation("ApprovedPosts")
+  role          Role         @default(USER)
   shift         Int
-  code          InviteCode? @relation(fields: [codeId], references: [id])
-  codeId        String?     @unique
-  likes         PostLike[]  @relation("UserLikes")
+  code          InviteCode?  @relation(fields: [codeId], references: [id])
+  codeId        String?      @unique
+  likes         PostLike[]   @relation("UserLikes")
+  appleTokens   AppleToken[]
+}
+
+model AppleToken {
+  id     String @id @db.VarChar(255)
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
 }
 
 model Post {
