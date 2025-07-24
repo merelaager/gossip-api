@@ -5,6 +5,7 @@
 
 # Secrets
 .env
+keys/*.p8
 
 # Node
 /node_modules
