@@ -1,10 +1,12 @@
+import { Type } from "@sinclair/typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
-import { SuccessResponse } from "../../schemas/jsend.js";
-import { Type } from "@sinclair/typebox";
+
 import prisma from "../../utils/prisma.js";
 
-const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
+import { SuccessResponse } from "../../schemas/jsend.js";
+
+const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
     "/tokens",
     {
@@ -39,3 +41,5 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     },
   );
 };
+
+export default appleRoute;
