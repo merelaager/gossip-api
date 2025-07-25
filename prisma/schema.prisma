@@ -29,9 +29,10 @@ model User {
 }
 
 model AppleToken {
-  id     String @id @db.VarChar(255)
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
+  id        String   @id @db.VarChar(255)
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now()) @db.DateTime(0)
 }
 
 model Post {
