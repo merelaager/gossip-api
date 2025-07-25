@@ -529,6 +529,19 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         data: { ...fields, authorId: userId, shift: userData.shift },
       });
 
+      const tokens = await prisma.appleToken.findMany({
+        where: { user: { shift: post.shift, role: "ADMIN" } },
+        select: { id: true },
+      });
+
+      const parsedTokens = tokens.map((token) => token.id);
+      await sendNotificationToTokens(
+        parsedTokens,
+        post.id,
+        "Postitus on ootel",
+        post.title,
+      );
+
       return reply
         .status(StatusCodes.CREATED)
         .send(createSuccessResponse({ postId: post.id }));
