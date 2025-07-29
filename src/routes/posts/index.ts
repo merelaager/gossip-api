@@ -329,6 +329,32 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.status(StatusCodes.NO_CONTENT).send();
     },
   );
+  fastify.post(
+    "/:postId/likes",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String() }),
+        body: Type.Object({ likeCount: Type.Number() }),
+      },
+    },
+    async (request, reply) => {
+      const { postId } = request.params;
+      const { likeCount } = request.body;
+      for (let i = 0; i < likeCount; i++) {
+        try {
+          await prisma.postLike.create({
+            data: {
+              postId,
+              userId: `fake-${i}`,
+            },
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }
+      return reply.status(StatusCodes.CREATED).send();
+    },
+  );
   fastify.put(
     "/:postId/likes/:userId",
     {

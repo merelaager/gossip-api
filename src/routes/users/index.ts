@@ -14,6 +14,39 @@ import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
+    "/fake",
+    {
+      schema: {
+        body: Type.Object({ userCount: Type.Number() }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+
+      const userData = (await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { shift: true },
+      }))!;
+
+      for (let i = 0; i < request.body.userCount; i++) {
+        try {
+          await prisma.user.create({
+            data: {
+              id: `fake-${i}`,
+              username: `fake-${i}`,
+              name: "Fake",
+              role: "USER",
+              shift: userData.shift,
+              password: "password",
+            },
+          });
+        } catch {}
+      }
+
+      return reply.code(StatusCodes.CREATED).send();
+    },
+  );
+  fastify.post(
     "/",
     {
       schema: {
@@ -106,7 +139,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           password: passwordHash,
           role: registrationInfo.role,
           shift: registrationInfo.shift,
-          name: registrationInfo.name
+          name: registrationInfo.name,
         },
       });
 
