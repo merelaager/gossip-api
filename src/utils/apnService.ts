@@ -5,6 +5,8 @@ const APN_KEY = process.env.APN_KEY_FILE!;
 const APN_KEY_ID = process.env.APN_KEY_ID!;
 const APN_TEAM_ID = process.env.APN_TEAM_ID!;
 
+const NOTIFICATION_DURATION_SECONDS = 60 * 60 * 6;
+
 const APN_PRODUCTION = process.env.APN_PRODUCTION
   ? process.env.APN_PRODUCTION === "true"
   : true;
@@ -29,7 +31,8 @@ export const sendNotificationToTokens = async (
     body: message,
     topic: "ee.merelaager.Gossip",
     payload: {
-      postId: postId
+      postId: postId,
+      expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
     },
   });
 
