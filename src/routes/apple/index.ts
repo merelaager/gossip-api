@@ -40,6 +40,26 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       return reply.status(StatusCodes.CREATED).send();
     },
   );
+
+  fastify.delete(
+    "/tokens/:token",
+    {
+      schema: {
+        params: Type.Object({
+          token: Type.String(),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { token } = request.params;
+
+      await prisma.appleToken.deleteMany({
+        where: { id: token },
+      });
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
 };
 
 export default appleRoute;
