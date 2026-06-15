@@ -7,9 +7,7 @@ const APN_TEAM_ID = process.env.APN_TEAM_ID!;
 
 const NOTIFICATION_DURATION_SECONDS = 60 * 60 * 6;
 
-const APN_PRODUCTION = process.env.APN_PRODUCTION
-  ? process.env.APN_PRODUCTION === "true"
-  : true;
+const APN_PRODUCTION = process.env.APN_PRODUCTION === "true";
 
 const apnProvider = new apn.Provider({
   token: {
