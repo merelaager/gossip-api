@@ -2,7 +2,9 @@ import { Type } from "@sinclair/typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
 
+import { TokenType } from "@prisma/client";
 import prisma from "../../utils/prisma.js";
+
 import { sendNotificationToTokens } from "../../utils/apnService.js";
 
 import { SuccessResponse } from "../../schemas/jsend.js";
@@ -15,6 +17,12 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         body: Type.Object({
           token: Type.String(),
           userId: Type.String(),
+          tokenType: Type.Optional(
+            Type.Union([
+              Type.Literal("development"),
+              Type.Literal("production"),
+            ]),
+          ),
         }),
         response: {
           [StatusCodes.OK]: SuccessResponse(
@@ -28,13 +36,15 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { token, userId } = request.body;
+      const { token, userId, tokenType } = request.body;
       await prisma.appleToken.upsert({
         where: { id: token },
         update: {},
         create: {
           id: token,
           userId,
+          tokenType:
+            tokenType === "development" ? TokenType.DEV : TokenType.PROD,
         },
       });
 

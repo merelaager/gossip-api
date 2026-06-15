@@ -13,6 +13,7 @@ const __dirname = dirname(__filename);
 
 const fastify = Fastify({
   logger: true,
+  maxParamLength: 256,
   ajv: {
     customOptions: {
       removeAdditional: false,

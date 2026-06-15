@@ -1,6 +1,9 @@
 import apn from "@parse/node-apn";
 import "dotenv/config";
 
+import { TokenType } from "@prisma/client";
+import prisma from "./prisma.js";
+
 const APN_KEY = process.env.APN_KEY_FILE!;
 const APN_KEY_ID = process.env.APN_KEY_ID!;
 const APN_TEAM_ID = process.env.APN_TEAM_ID!;
@@ -8,6 +11,10 @@ const APN_TEAM_ID = process.env.APN_TEAM_ID!;
 const NOTIFICATION_DURATION_SECONDS = 60 * 60 * 6;
 
 export const APN_PRODUCTION = process.env.APN_PRODUCTION === "true";
+
+export const APN_TOKEN_TYPE: TokenType = APN_PRODUCTION
+  ? TokenType.PROD
+  : TokenType.DEV;
 
 const apnProvider = new apn.Provider({
   token: {
@@ -35,8 +42,33 @@ export const sendNotificationToTokens = async (
   });
 
   try {
-    await apnProvider.send(notification, tokens);
+    const result = await apnProvider.send(notification, tokens);
+
+    const invalidTokens: string[] = [];
+
+    result.failed.forEach((failure) => {
+      console.error(
+        `APN delivery failed for ${failure.device}: ${
+          failure.response?.reason ??
+          failure.error ??
+          `status ${failure.status}`
+        }`,
+      );
+
+      if (Number(failure.status) === 410) {
+        invalidTokens.push(failure.device);
+      }
+    });
+
+    if (invalidTokens.length > 0) {
+      await prisma.appleToken.deleteMany({
+        where: { id: { in: invalidTokens } },
+      });
+    }
+
+    return;
   } catch (err) {
     console.error(err);
+    return;
   }
 };

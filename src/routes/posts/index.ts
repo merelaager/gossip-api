@@ -15,7 +15,10 @@ import {
   createFailResponse,
   createSuccessResponse,
 } from "../../utils/jsend.js";
-import { sendNotificationToTokens } from "../../utils/apnService.js";
+import {
+  APN_TOKEN_TYPE,
+  sendNotificationToTokens,
+} from "../../utils/apnService.js";
 
 import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
@@ -313,7 +316,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         });
 
         const tokens = await prisma.appleToken.findMany({
-          where: { user: { shift: post.shift } },
+          where: { tokenType: APN_TOKEN_TYPE, user: { shift: post.shift } },
           select: { id: true },
         });
 
@@ -556,7 +559,10 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       const tokens = await prisma.appleToken.findMany({
-        where: { user: { shift: post.shift, role: "ADMIN" } },
+        where: {
+          tokenType: APN_TOKEN_TYPE,
+          user: { shift: post.shift, role: "ADMIN" },
+        },
         select: { id: true },
       });
 
