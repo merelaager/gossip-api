@@ -6,6 +6,8 @@ import Fastify from "fastify";
 import fastifyAutoload from "@fastify/autoload";
 import cors from "@fastify/cors";
 
+import { APN_PRODUCTION } from "./utils/apnService.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -54,6 +56,9 @@ const start = async () => {
   const serverPort = process.env.PORT ? parseInt(process.env.PORT) : 3000;
   try {
     await fastify.listen({ port: serverPort });
+    fastify.log.info(
+      `APN environment: ${APN_PRODUCTION ? "production" : "sandbox"}`,
+    );
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
