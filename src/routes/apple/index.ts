@@ -3,6 +3,7 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
 
 import prisma from "../../utils/prisma.js";
+import { sendNotificationToTokens } from "../../utils/apnService.js";
 
 import { SuccessResponse } from "../../schemas/jsend.js";
 
@@ -56,6 +57,29 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       await prisma.appleToken.deleteMany({
         where: { id: token },
       });
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
+
+  fastify.post(
+    "/tokens/:token/notifications/test",
+    {
+      schema: {
+        params: Type.Object({
+          token: Type.String(),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { token } = request.params;
+
+      await sendNotificationToTokens(
+        [token],
+        "",
+        "Testteavitus",
+        "Kui seda teavitust näed, siis peaks kõik toimima!",
+      );
 
       return reply.status(StatusCodes.NO_CONTENT).send();
     },
