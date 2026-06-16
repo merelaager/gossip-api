@@ -17,6 +17,7 @@ import {
 } from "../../utils/jsend.js";
 import {
   APN_TOKEN_TYPE,
+  canDeliverApprovedPostNotification,
   sendNotificationToTokens,
 } from "../../utils/apnService.js";
 
@@ -315,18 +316,20 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           data: { published: request.body.published, approverId: user.userId },
         });
 
-        const tokens = await prisma.appleToken.findMany({
-          where: { tokenType: APN_TOKEN_TYPE, user: { shift: post.shift } },
-          select: { id: true },
-        });
+        if (canDeliverApprovedPostNotification()) {
+          const tokens = await prisma.appleToken.findMany({
+            where: { tokenType: APN_TOKEN_TYPE, user: { shift: post.shift } },
+            select: { id: true },
+          });
 
-        const parsedTokens = tokens.map((token) => token.id);
-        await sendNotificationToTokens(
-          parsedTokens,
-          post.id,
-          "Uus postitus",
-          post.title,
-        );
+          const parsedTokens = tokens.map((token) => token.id);
+          await sendNotificationToTokens(
+            parsedTokens,
+            post.id,
+            "Uus postitus",
+            post.title,
+          );
+        }
       }
 
       return reply.status(StatusCodes.NO_CONTENT).send();

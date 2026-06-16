@@ -25,6 +25,23 @@ const apnProvider = new apn.Provider({
   production: APN_PRODUCTION,
 });
 
+const QUIET_HOURS_TIMEZONE = "Europe/Tallinn";
+const QUIET_HOURS_START = "22:30";
+const QUIET_HOURS_END = "09:30";
+
+const isWithinQuietHours = () => {
+  const currentTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: QUIET_HOURS_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+
+  return currentTime >= QUIET_HOURS_START || currentTime < QUIET_HOURS_END;
+};
+
+export const canDeliverApprovedPostNotification = () =>
+  !APN_PRODUCTION || !isWithinQuietHours();
+
 export const sendNotificationToTokens = async (
   tokens: string[],
   postId: string,
