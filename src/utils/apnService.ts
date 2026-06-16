@@ -35,9 +35,9 @@ export const sendNotificationToTokens = async (
     title: title,
     body: message,
     topic: "ee.merelaager.Gossip",
+    expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
     payload: {
       postId: postId,
-      expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
     },
   });
 
