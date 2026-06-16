@@ -42,22 +42,9 @@ const isWithinQuietHours = () => {
 export const canDeliverApprovedPostNotification = () =>
   !APN_PRODUCTION || !isWithinQuietHours();
 
-export const sendNotificationToTokens = async (
-  tokens: string[],
-  postId: string,
-  title: string,
-  message: string,
-) => {
-  const notification = new apn.Notification({
-    title: title,
-    body: message,
-    topic: "ee.merelaager.Gossip",
-    expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
-    payload: {
-      postId: postId,
-    },
-  });
+const MODERATION_QUEUE_COLLAPSE_ID = "mod-queue";
 
+const deliver = async (notification: apn.Notification, tokens: string[]) => {
   try {
     const result = await apnProvider.send(notification, tokens);
 
@@ -82,10 +69,44 @@ export const sendNotificationToTokens = async (
         where: { id: { in: invalidTokens } },
       });
     }
-
-    return;
   } catch (err) {
     console.error(err);
-    return;
   }
+};
+
+export const sendNotificationToTokens = async (
+  tokens: string[],
+  postId: string,
+  title: string,
+  message: string,
+) => {
+  const notification = new apn.Notification({
+    title: title,
+    body: message,
+    topic: "ee.merelaager.Gossip",
+    expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
+    payload: {
+      postId: postId,
+    },
+  });
+
+  await deliver(notification, tokens);
+};
+
+export const sendModerationQueueNotification = async (
+  tokens: string[],
+  queueLength: number,
+) => {
+  const postWord = queueLength === 1 ? "postitus" : "postitust";
+
+  const notification = new apn.Notification({
+    title: "Postitused ootel",
+    body: `${queueLength} ${postWord} ootab ülevaatust`,
+    topic: "ee.merelaager.Gossip",
+    collapseId: MODERATION_QUEUE_COLLAPSE_ID,
+    badge: queueLength,
+    expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
+  });
+
+  await deliver(notification, tokens);
 };

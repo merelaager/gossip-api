@@ -18,6 +18,7 @@ import {
 import {
   APN_TOKEN_TYPE,
   canDeliverApprovedPostNotification,
+  sendModerationQueueNotification,
   sendNotificationToTokens,
 } from "../../utils/apnService.js";
 
@@ -569,13 +570,12 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         select: { id: true },
       });
 
+      const queueLength = await prisma.post.count({
+        where: { shift: post.shift, published: false, hidden: false },
+      });
+
       const parsedTokens = tokens.map((token) => token.id);
-      await sendNotificationToTokens(
-        parsedTokens,
-        post.id,
-        "Postitus on ootel",
-        post.title,
-      );
+      await sendModerationQueueNotification(parsedTokens, queueLength);
 
       return reply
         .status(StatusCodes.CREATED)
