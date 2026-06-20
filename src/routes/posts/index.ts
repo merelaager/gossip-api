@@ -658,13 +658,20 @@ const fetchPosts = async (
   pageNumber: number,
   userId: string,
 ) => {
+  const where = {
+    ...searchOptions,
+    createdAt: {
+      gte: new Date(new Date().getFullYear(), 0, 1),
+    },
+  };
+
   const postCount = await prisma.post.count({
-    where: searchOptions,
+    where,
   });
   const totalPages = Math.ceil(postCount / pageSize);
 
   const posts = await prisma.post.findMany({
-    where: searchOptions,
+    where,
     orderBy: { createdAt: "desc" },
     skip: pageSize * (pageNumber - 1),
     take: pageSize,
