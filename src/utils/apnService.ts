@@ -106,6 +106,9 @@ export const sendModerationQueueNotification = async (
     collapseId: MODERATION_QUEUE_COLLAPSE_ID,
     badge: queueLength,
     expiry: Math.floor(Date.now() / 1000) + NOTIFICATION_DURATION_SECONDS,
+    payload: {
+      type: "moderation",
+    },
   });
 
   await deliver(notification, tokens);
