@@ -1,7 +1,7 @@
 import apn from "@parse/node-apn";
 import "dotenv/config";
 
-import { TokenType } from "@prisma/client";
+import { TokenType } from "../generated/prisma/client.js";
 import prisma from "./prisma.js";
 
 const APN_KEY = process.env.APN_KEY_FILE!;

@@ -2,7 +2,7 @@ import { Type } from "@sinclair/typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import { StatusCodes } from "http-status-codes";
 
-import { TokenType } from "@prisma/client";
+import { TokenType } from "../../generated/prisma/client.js";
 import prisma from "../../utils/prisma.js";
 
 import { sendNotificationToTokens } from "../../utils/apnService.js";
