@@ -225,7 +225,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         where: { id: request.params.postId },
         include: {
           _count: {
-            select: { likes: true },
+            select: { likes: true, comments: { where: { hidden: false } } },
           },
           likes: {
             where: {
@@ -268,9 +268,119 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         createdAt: post.createdAt,
         isLiked,
         likeCount,
+        commentCount: post._count.comments,
       };
 
       return reply.send(createSuccessResponse({ post: filteredPost }));
+    },
+  );
+  fastify.get(
+    "/:postId/comments",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String() }),
+        querystring: Type.Object({
+          page: Type.Optional(Type.Number()),
+          limit: Type.Optional(Type.Number()),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+      const { postId } = request.params;
+
+      const post = await findVisiblePost(postId, user.userId);
+
+      if (!post) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      const commentsPerPage = request.query.limit || 15;
+      const pageNumber = request.query.page || 1;
+
+      const where = { postId, hidden: false };
+
+      const commentCount = await prisma.comment.count({ where });
+      const totalPages = Math.ceil(commentCount / commentsPerPage);
+
+      const comments = await prisma.comment.findMany({
+        where,
+        orderBy: { createdAt: "asc" },
+        skip: commentsPerPage * (pageNumber - 1),
+        take: commentsPerPage,
+      });
+
+      return reply.send(
+        createSuccessResponse({
+          comments: comments.map((comment) => ({
+            id: comment.id,
+            content: comment.content,
+            createdAt: comment.createdAt,
+            isAuthor: comment.authorId === user.userId,
+          })),
+          currentPage: pageNumber,
+          totalPages,
+        }),
+      );
+    },
+  );
+  fastify.post(
+    "/:postId/comments",
+    {
+      schema: {
+        params: Type.Object({ postId: Type.String() }),
+        body: Type.Object({
+          content: Type.String({ minLength: 1, maxLength: 5_000 }),
+        }),
+        response: {
+          [StatusCodes.CREATED]: SuccessResponse(
+            Type.Object({
+              commentId: Type.String(),
+            }),
+          ),
+          "4xx": FailResponse(
+            Type.Object({
+              message: Type.String(),
+            }),
+          ),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+      const { postId } = request.params;
+      const content = request.body.content.trim();
+
+      const post = await findVisiblePost(postId, user.userId);
+
+      if (!post) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            message: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      if (!content) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            message: "Kommentaar ei tohi olla tühi.",
+          }),
+        );
+      }
+
+      const comment = await prisma.comment.create({
+        data: { content, postId, authorId: user.userId },
+      });
+
+      return reply
+        .status(StatusCodes.CREATED)
+        .send(createSuccessResponse({ commentId: comment.id }));
     },
   );
   fastify.patch(
@@ -637,6 +747,25 @@ type SearchOptions = {
   likes?: { some: { userId: string } };
 };
 
+const findVisiblePost = async (postId: string, userId: string) => {
+  const userData = (await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, shift: true },
+  }))!;
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+
+  if (!post || post.hidden || userData.shift !== post.shift) {
+    return null;
+  }
+
+  if (!post.published && userData.role === "USER" && post.authorId !== userId) {
+    return null;
+  }
+
+  return post;
+};
+
 const hashImage = async (filePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const hash = createHash("sha256");
@@ -677,7 +806,7 @@ const fetchPosts = async (
     take: pageSize,
     include: {
       _count: {
-        select: { likes: true },
+        select: { likes: true, comments: { where: { hidden: false } } },
       },
       likes: { where: { userId } },
     },
@@ -693,6 +822,7 @@ const fetchPosts = async (
         createdAt: post.createdAt,
         published: post.published,
         likeCount: post._count.likes,
+        commentCount: post._count.comments,
         isLiked: post.likes.length > 0,
       };
     }),

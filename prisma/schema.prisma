@@ -33,6 +33,7 @@ model User {
   code          InviteCode?  @relation(fields: [codeId], references: [id])
   codeId        String?      @unique
   likes         PostLike[]   @relation("UserLikes")
+  comments      Comment[]    @relation("UserComments")
   appleTokens   AppleToken[]
 }
 
@@ -59,6 +60,21 @@ model Post {
   approverId String?
   shift      Int
   likes      PostLike[] @relation("PostLikes")
+  comments   Comment[]  @relation("PostComments")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  author    User     @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+
+  @@index([postId, createdAt])
 }
 
 model PostLike {
