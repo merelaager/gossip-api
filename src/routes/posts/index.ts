@@ -383,6 +383,67 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         .send(createSuccessResponse({ commentId: comment.id }));
     },
   );
+  fastify.delete(
+    "/:postId/comments/:commentId",
+    {
+      schema: {
+        params: Type.Object({
+          postId: Type.String(),
+          commentId: Type.String(),
+        }),
+      },
+    },
+    async (request, reply) => {
+      const { user } = request.session;
+      const { postId, commentId } = request.params;
+
+      const userData = (await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { role: true, shift: true },
+      }))!;
+
+      const post = await prisma.post.findUnique({ where: { id: postId } });
+
+      if (!post || userData.shift !== post.shift) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            postId,
+            message: "Postitust ei leitud.",
+          }),
+        );
+      }
+
+      if (userData.role !== "ADMIN") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            commentId,
+            message: "Puuduvad kommentaari kustutamise õigused!",
+          }),
+        );
+      }
+
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        select: { postId: true },
+      });
+
+      if (!comment || comment.postId !== postId) {
+        return reply.status(StatusCodes.NOT_FOUND).send(
+          createFailResponse({
+            commentId,
+            message: "Kommentaari ei leitud.",
+          }),
+        );
+      }
+
+      await prisma.comment.update({
+        where: { id: commentId },
+        data: { hidden: true },
+      });
+
+      return reply.status(StatusCodes.NO_CONTENT).send();
+    },
+  );
   fastify.patch(
     "/:postId",
     {
