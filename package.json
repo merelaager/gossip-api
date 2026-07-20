@@ -28,17 +28,15 @@
     "fastify-plugin": "^5.0.1",
     "file-type": "^21.0.0",
     "http-status-codes": "^2.3.0",
-    "prisma": "^7.8.0",
-    "tmp": "^0.2.3",
-    "tsx": "^4.23.1"
+    "prisma": "^7.8.0"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.1",
     "@types/node": "^24.0.10",
-    "@types/tmp": "^0",
     "prettier": "^3.6.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   },
   "private": true,
-  "packageManager": "yarn@4.4.1"
+  "packageManager": "yarn@4.17.1"
 }

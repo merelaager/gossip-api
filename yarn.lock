@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 10
   cacheKey: 10c0
 
 "@borewit/text-codec@npm:^0.2.1":
@@ -793,13 +793,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/tmp@npm:^0":
-  version: 0.2.6
-  resolution: "@types/tmp@npm:0.2.6"
-  checksum: 10c0/a11bfa2cd8eaa6c5d62f62a3569192d7a2c28efdc5c17af0b0551db85816b2afc8156f3ca15ac76f0b142ae1403f04f44279871424233a1f3390b2e5fc828cd0
-  languageName: node
-  linkType: hard
-
 "abbrev@npm:^5.0.0":
   version: 5.0.0
   resolution: "abbrev@npm:5.0.0"
@@ -1477,7 +1470,6 @@ __metadata:
     "@sinclair/typebox": "npm:^0.34.37"
     "@tsconfig/node24": "npm:^24.0.1"
     "@types/node": "npm:^24.0.10"
-    "@types/tmp": "npm:^0"
     argon2: "npm:^0.43.0"
     crockford-base32: "npm:^2.0.0"
     dotenv: "npm:^17.0.1"
@@ -1488,7 +1480,6 @@ __metadata:
     http-status-codes: "npm:^2.3.0"
     prettier: "npm:^3.6.2"
     prisma: "npm:^7.8.0"
-    tmp: "npm:^0.2.3"
     tsx: "npm:^4.23.1"
     typescript: "npm:^5.8.3"
   languageName: unknown
@@ -2294,13 +2285,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tmp@npm:^0.2.3":
-  version: 0.2.7
-  resolution: "tmp@npm:0.2.7"
-  checksum: 10c0/59eb55584f2f07210d3231b6a1f6b5c2b9794d8a7b509c8ee867ed2acad6d2245ee2448b7937b676ffbff3155a70077edde8a69f9d7cf0f90c86a62e8910c357
-  languageName: node
-  linkType: hard
-
 "toad-cache@npm:^3.7.0":
   version: 3.7.4
   resolution: "toad-cache@npm:3.7.4"
@@ -2362,11 +2346,11 @@ __metadata:
 
 "typescript@patch:typescript@npm%3A^5.8.3#optional!builtin<compat/typescript>":
   version: 5.9.3
-  resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=8c6c40"
+  resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/6f7e53bf0d9702350deeb6f35e08b69cbc8b958c33e0ec77bdc0ad6a6c8e280f3959dcbfde6f5b0848bece57810696489deaaa53d75de3578ff255d168c1efbd
+  checksum: 10c0/ad09fdf7a756814dce65bc60c1657b40d44451346858eea230e10f2e95a289d9183b6e32e5c11e95acc0ccc214b4f36289dcad4bf1886b0adb84d711d336a430
   languageName: node
   linkType: hard
 
