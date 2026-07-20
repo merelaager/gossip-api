@@ -85,6 +85,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           newPassword: Type.String(),
         }),
         response: {
+          [StatusCodes.NO_CONTENT]: Type.Void(),
           [StatusCodes.BAD_REQUEST]: FailResponse(
             Type.Object({
               message: Type.String(),

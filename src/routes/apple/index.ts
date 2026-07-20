@@ -7,8 +7,6 @@ import prisma from "../../utils/prisma.js";
 
 import { sendNotificationToTokens } from "../../utils/apnService.js";
 
-import { SuccessResponse } from "../../schemas/jsend.js";
-
 const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.post(
     "/tokens",
@@ -25,13 +23,7 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           ),
         }),
         response: {
-          [StatusCodes.OK]: SuccessResponse(
-            Type.Object({
-              id: Type.String(),
-              username: Type.String(),
-              role: Type.String(),
-            }),
-          ),
+          [StatusCodes.CREATED]: Type.Void(),
         },
       },
     },
