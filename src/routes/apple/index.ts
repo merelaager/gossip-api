@@ -23,7 +23,7 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           ),
         }),
         response: {
-          [StatusCodes.CREATED]: Type.Void(),
+          [StatusCodes.CREATED]: {},
         },
       },
     },
