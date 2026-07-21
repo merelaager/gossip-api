@@ -415,18 +415,9 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      if (userData.role !== "ADMIN") {
-        return reply.status(StatusCodes.FORBIDDEN).send(
-          createFailResponse({
-            commentId,
-            message: "Puuduvad kommentaari kustutamise õigused!",
-          }),
-        );
-      }
-
       const comment = await prisma.comment.findUnique({
         where: { id: commentId },
-        select: { postId: true },
+        select: { postId: true, authorId: true },
       });
 
       if (!comment || comment.postId !== postId) {
@@ -434,6 +425,15 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           createFailResponse({
             commentId,
             message: "Kommentaari ei leitud.",
+          }),
+        );
+      }
+
+      if (comment.authorId !== user.userId && userData.role !== "ADMIN") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            commentId,
+            message: "Puuduvad kommentaari kustutamise õigused!",
           }),
         );
       }
