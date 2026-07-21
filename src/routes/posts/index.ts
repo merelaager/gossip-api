@@ -500,6 +500,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
             post.id,
             "Uus postitus",
             post.title,
+            request.log,
           );
         }
       }
@@ -746,7 +747,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       });
 
       const parsedTokens = tokens.map((token) => token.id);
-      await sendModerationQueueNotification(parsedTokens, queueLength);
+      await sendModerationQueueNotification(
+        parsedTokens,
+        queueLength,
+        request.log,
+      );
 
       return reply
         .status(StatusCodes.CREATED)

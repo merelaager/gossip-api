@@ -1,4 +1,5 @@
 import apn from "@parse/node-apn";
+import type { FastifyBaseLogger } from "fastify";
 import "dotenv/config";
 
 import { TokenType } from "../generated/prisma/client.js";
@@ -44,19 +45,25 @@ export const canDeliverApprovedPostNotification = () =>
 
 const MODERATION_QUEUE_COLLAPSE_ID = "mod-queue";
 
-const deliver = async (notification: apn.Notification, tokens: string[]) => {
+const deliver = async (
+  notification: apn.Notification,
+  tokens: string[],
+  logger: FastifyBaseLogger,
+) => {
   try {
     const result = await apnProvider.send(notification, tokens);
 
     const invalidTokens: string[] = [];
 
     result.failed.forEach((failure) => {
-      console.error(
-        `APN delivery failed for ${failure.device}: ${
-          failure.response?.reason ??
-          failure.error ??
-          `status ${failure.status}`
-        }`,
+      logger.error(
+        {
+          device: failure.device,
+          status: failure.status,
+          reason: failure.response?.reason,
+          err: failure.error,
+        },
+        "APN delivery failed",
       );
 
       if (Number(failure.status) === 410) {
@@ -65,12 +72,13 @@ const deliver = async (notification: apn.Notification, tokens: string[]) => {
     });
 
     if (invalidTokens.length > 0) {
-      await prisma.appleToken.deleteMany({
+      const { count } = await prisma.appleToken.deleteMany({
         where: { id: { in: invalidTokens } },
       });
+      logger.info({ count }, "Removed expired APN tokens");
     }
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "APN delivery threw");
   }
 };
 
@@ -79,6 +87,7 @@ export const sendNotificationToTokens = async (
   postId: string,
   title: string,
   message: string,
+  logger: FastifyBaseLogger,
 ) => {
   const notification = new apn.Notification({
     title: title,
@@ -90,12 +99,13 @@ export const sendNotificationToTokens = async (
     },
   });
 
-  await deliver(notification, tokens);
+  await deliver(notification, tokens, logger);
 };
 
 export const sendModerationQueueNotification = async (
   tokens: string[],
   queueLength: number,
+  logger: FastifyBaseLogger,
 ) => {
   const postWord = queueLength === 1 ? "postitus" : "postitust";
 
@@ -111,5 +121,5 @@ export const sendModerationQueueNotification = async (
     },
   });
 
-  await deliver(notification, tokens);
+  await deliver(notification, tokens, logger);
 };

@@ -81,6 +81,7 @@ const appleRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         "",
         "Testteavitus",
         "Kui seda teavitust näed, siis peaks kõik toimima!",
+        request.log,
       );
 
       return reply.status(StatusCodes.NO_CONTENT).send();
