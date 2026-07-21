@@ -24,6 +24,8 @@ import {
 
 import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MiB
+
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
     "/",
@@ -762,11 +764,27 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     limits: {
       fields: 0,
       files: 1,
-      fileSize: 5242880, // 5 MiB
+      fileSize: MAX_IMAGE_SIZE_BYTES,
     },
   });
   fastify.post("/images", async (request, reply) => {
-    const files = await request.saveRequestFiles();
+    let files;
+    try {
+      files = await request.saveRequestFiles();
+    } catch (err) {
+      if (
+        err instanceof fastify.multipartErrors.RequestFileTooLargeError ||
+        (err as { code?: string }).code === "FST_REQ_FILE_TOO_LARGE"
+      ) {
+        const maxSizeMib = Math.floor(MAX_IMAGE_SIZE_BYTES / (1024 * 1024));
+        return reply.status(StatusCodes.REQUEST_TOO_LONG).send(
+          createFailResponse({
+            message: `Fail on liiga suur. Maksimaalne lubatud suurus on ${maxSizeMib} MB.`,
+          }),
+        );
+      }
+      throw err;
+    }
 
     if (files.length !== 1) {
       return reply.status(StatusCodes.BAD_REQUEST).send(
