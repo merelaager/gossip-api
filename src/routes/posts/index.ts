@@ -24,7 +24,7 @@ import {
 
 import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MiB
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -368,6 +368,14 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
+      if (post.role === "READER") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            message: "Puuduvad kommenteerimise õigused.",
+          }),
+        );
+      }
+
       if (!content) {
         return reply.status(StatusCodes.BAD_REQUEST).send(
           createFailResponse({
@@ -702,6 +710,11 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
               message: Type.String(),
             }),
           ),
+          [StatusCodes.FORBIDDEN]: FailResponse(
+            Type.Object({
+              message: Type.String(),
+            }),
+          ),
         },
       },
     },
@@ -711,8 +724,16 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
 
       const userData = (await prisma.user.findUnique({
         where: { id: userId },
-        select: { shift: true },
+        select: { shift: true, role: true },
       }))!;
+
+      if (userData.role === "READER") {
+        return reply.status(StatusCodes.FORBIDDEN).send(
+          createFailResponse({
+            message: "Puuduvad postitamise õigused.",
+          }),
+        );
+      }
 
       if (!content && !imageId) {
         return reply.status(StatusCodes.BAD_REQUEST).send(
@@ -847,7 +868,7 @@ const findVisiblePost = async (postId: string, userId: string) => {
     return null;
   }
 
-  return post;
+  return { post, role: userData.role };
 };
 
 const hashImage = async (filePath: string): Promise<string> => {
