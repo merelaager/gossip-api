@@ -39,6 +39,31 @@ const MAX_VIDEO_DURATION_SECONDS =
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
+    "/config",
+    {
+      schema: {
+        response: {
+          [StatusCodes.OK]: SuccessResponse(
+            Type.Object({
+              maxVideoDurationSeconds: Type.Number(),
+              maxImageSizeBytes: Type.Number(),
+              maxVideoSizeBytes: Type.Number(),
+            }),
+          ),
+        },
+      },
+    },
+    async (_request, reply) => {
+      return reply.send(
+        createSuccessResponse({
+          maxVideoDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+          maxImageSizeBytes: MAX_IMAGE_SIZE_BYTES,
+          maxVideoSizeBytes: MAX_VIDEO_SIZE_BYTES,
+        }),
+      );
+    },
+  );
+  fastify.get(
     "/",
     {
       schema: {
