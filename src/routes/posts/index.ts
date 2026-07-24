@@ -10,6 +10,7 @@ import { StatusCodes } from "http-status-codes";
 import { fileTypeFromFile } from "file-type";
 
 import prisma from "../../utils/prisma.js";
+import { probeVideoDurationSeconds } from "../../utils/video.js";
 import {
   createErrorResponse,
   createFailResponse,
@@ -25,6 +26,16 @@ import {
 import { FailResponse, SuccessResponse } from "../../schemas/jsend.js";
 
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_SIZE_BYTES = 64 * 1024 * 1024;
+
+const parsedMaxVideoDuration = Number.parseInt(
+  process.env.MAX_VIDEO_DURATION_SECONDS ?? "",
+  10,
+);
+const MAX_VIDEO_DURATION_SECONDS =
+  Number.isFinite(parsedMaxVideoDuration) && parsedMaxVideoDuration > 0
+    ? parsedMaxVideoDuration
+    : 10;
 
 const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
   fastify.get(
@@ -266,6 +277,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         title: post.title,
         content: post.content,
         imageId: post.imageId,
+        videoId: post.videoId,
         published: post.published,
         createdAt: post.createdAt,
         isLiked,
@@ -698,6 +710,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
           title: Type.String({ minLength: 1 }),
           content: Type.Optional(Type.String({ maxLength: 15_000 })),
           imageId: Type.Optional(Type.String({ maxLength: 255 })),
+          videoId: Type.Optional(Type.String({ maxLength: 255 })),
         }),
         response: {
           [StatusCodes.CREATED]: SuccessResponse(
@@ -720,7 +733,7 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     },
     async (request, reply) => {
       const { userId } = request.session.user;
-      const { title, content, imageId } = request.body;
+      const { title, content, imageId, videoId } = request.body;
 
       const userData = (await prisma.user.findUnique({
         where: { id: userId },
@@ -735,15 +748,28 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
         );
       }
 
-      if (!content && !imageId) {
+      if (!content && !imageId && !videoId) {
         return reply.status(StatusCodes.BAD_REQUEST).send(
           createFailResponse({
-            message: "Postitus peab sisaldama teksti või pilti.",
+            message: "Postitus peab sisaldama teksti, pilti või videot.",
           }),
         );
       }
 
-      const fields: { title: string; content?: string; imageId?: string } = {
+      if (imageId && videoId) {
+        return reply.status(StatusCodes.BAD_REQUEST).send(
+          createFailResponse({
+            message: "Postitusel ei saa olla korraga pilti ja videot.",
+          }),
+        );
+      }
+
+      const fields: {
+        title: string;
+        content?: string;
+        imageId?: string;
+        videoId?: string;
+      } = {
         title,
       };
       if (content) {
@@ -751,6 +777,9 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
       }
       if (imageId) {
         fields.imageId = imageId;
+      }
+      if (videoId) {
+        fields.videoId = videoId;
       }
 
       const post = await prisma.post.create({
@@ -785,13 +814,15 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     limits: {
       fields: 0,
       files: 1,
-      fileSize: MAX_IMAGE_SIZE_BYTES,
+      fileSize: MAX_VIDEO_SIZE_BYTES,
     },
   });
   fastify.post("/images", async (request, reply) => {
     let files;
     try {
-      files = await request.saveRequestFiles();
+      files = await request.saveRequestFiles({
+        limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
+      });
     } catch (err) {
       if (
         err instanceof fastify.multipartErrors.RequestFileTooLargeError ||
@@ -841,6 +872,79 @@ const postsRoute: FastifyPluginAsyncTypebox = async (fastify) => {
     return reply
       .status(StatusCodes.OK)
       .send(createSuccessResponse({ fileName }));
+  });
+  fastify.post("/videos", async (request, reply) => {
+    let files;
+    try {
+      files = await request.saveRequestFiles({
+        limits: { fileSize: MAX_VIDEO_SIZE_BYTES },
+      });
+    } catch (err) {
+      if (
+        err instanceof fastify.multipartErrors.RequestFileTooLargeError ||
+        (err as { code?: string }).code === "FST_REQ_FILE_TOO_LARGE"
+      ) {
+        const maxSizeMib = Math.floor(MAX_VIDEO_SIZE_BYTES / (1024 * 1024));
+        return reply.status(StatusCodes.REQUEST_TOO_LONG).send(
+          createFailResponse({
+            message: `Fail on liiga suur. Maksimaalne lubatud suurus on ${maxSizeMib} MB.`,
+          }),
+        );
+      }
+      throw err;
+    }
+
+    if (files.length !== 1) {
+      return reply.status(StatusCodes.BAD_REQUEST).send(
+        createFailResponse({
+          message: "Fail puudub!",
+        }),
+      );
+    }
+
+    const filePath = files[0].filepath;
+    const mimeType = (await fileTypeFromFile(filePath))?.mime;
+
+    const allowedMimeTypes = ["video/mp4", "video/quicktime"];
+    if (!mimeType || !allowedMimeTypes.includes(mimeType)) {
+      return reply.status(StatusCodes.BAD_REQUEST).send(
+        createFailResponse({
+          message: `Failitüüp '${mimeType}' ei ole lubatud.`,
+          acceptedTypes: allowedMimeTypes,
+        }),
+      );
+    }
+
+    let durationSeconds: number;
+    try {
+      durationSeconds = await probeVideoDurationSeconds(filePath);
+    } catch (err) {
+      request.log.error({ err }, "Failed to probe video duration");
+      return reply
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .send(createErrorResponse("Video töötlemine ebaõnnestus."));
+    }
+
+    if (durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+      return reply.status(StatusCodes.BAD_REQUEST).send(
+        createFailResponse({
+          message: `Video on liiga pikk. Maksimaalne lubatud pikkus on ${MAX_VIDEO_DURATION_SECONDS} sekundit.`,
+          maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+        }),
+      );
+    }
+
+    const guid = await fastify.uploadToStream(filePath, files[0].filename);
+
+    if (!guid) {
+      return reply
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .send(createErrorResponse("Videot ei õnnestunud üles laadida."));
+    }
+
+    return reply
+      .status(StatusCodes.OK)
+      .send(createSuccessResponse({ videoId: guid }));
   });
 };
 
@@ -924,6 +1028,7 @@ const fetchPosts = async (
         title: post.title,
         content: post.content,
         imageId: post.imageId,
+        videoId: post.videoId,
         createdAt: post.createdAt,
         published: post.published,
         likeCount: post._count.likes,

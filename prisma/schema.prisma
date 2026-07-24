@@ -50,6 +50,7 @@ model Post {
   title      String
   content    String?    @db.Text
   imageId    String?
+  videoId    String?
   published  Boolean    @default(false)
   hidden     Boolean    @default(false)
   createdAt  DateTime   @default(now())
